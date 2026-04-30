@@ -2,19 +2,28 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Play, Send, BookOpen, Settings, RefreshCw, Cpu, User, AlertCircle } from 'lucide-react';
 
 export default function App() {
-  // 状态管理
+  // 状态管理 - 自动从浏览器本地存储读取上一次的设置
   const [gameState, setGameState] = useState('setup'); // 'setup', 'playing', 'loading'
-  const [worldSetting, setWorldSetting] = useState('在2084年的新东京，你是一名因为植入体排斥反应而失去工作的退役侦探。今天，一位神秘的雇主敲响了你事务所的门...');
-  const [genre, setGenre] = useState('赛博朋克 / 悬疑');
+  const [worldSetting, setWorldSetting] = useState(() => localStorage.getItem('omni_worldSetting') || '在2084年的新东京，你是一名因为植入体排斥反应而失去工作的退役侦探。今天，一位神秘的雇主敲响了你事务所的门...');
+  const [genre, setGenre] = useState(() => localStorage.getItem('omni_genre') || '赛博朋克 / 悬疑');
   const [chatHistory, setChatHistory] = useState([]);
   const [userInput, setUserInput] = useState('');
   
-  // API 配置状态
-  const [apiKey, setApiKey] = useState('');
-  const [apiEndpoint, setApiEndpoint] = useState('https://api.openai.com/v1/chat/completions');
-  const [apiModel, setApiModel] = useState('gpt-3.5-turbo');
+  // API 配置状态 - 自动从浏览器本地存储读取
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('omni_apiKey') || '');
+  const [apiEndpoint, setApiEndpoint] = useState(() => localStorage.getItem('omni_apiEndpoint') || 'https://api.openai.com/v1/chat/completions');
+  const [apiModel, setApiModel] = useState(() => localStorage.getItem('omni_apiModel') || 'gpt-3.5-turbo');
   
   const chatEndRef = useRef(null);
+
+  // 监听配置变化，只要修改了就自动保存到浏览器
+  useEffect(() => {
+    localStorage.setItem('omni_apiKey', apiKey);
+    localStorage.setItem('omni_apiEndpoint', apiEndpoint);
+    localStorage.setItem('omni_apiModel', apiModel);
+    localStorage.setItem('omni_worldSetting', worldSetting);
+    localStorage.setItem('omni_genre', genre);
+  }, [apiKey, apiEndpoint, apiModel, worldSetting, genre]);
 
   // 滚动到最新消息
   useEffect(() => {
@@ -145,7 +154,7 @@ export default function App() {
               onChange={(e) => setApiModel(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all text-slate-300"
             />
-            <p className="text-xs text-slate-600">若 API Key 留空则运行本地演示模式。</p>
+            <p className="text-xs text-slate-600">配置将自动保存在本地浏览器中。</p>
           </div>
 
           <div className="space-y-2">
