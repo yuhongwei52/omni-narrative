@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Send, BookOpen, Settings, RefreshCw, Cpu, User, AlertCircle, Bookmark, Trash2, Clock, Library } from 'lucide-react';
+import { Play, Send, BookOpen, Settings, RefreshCw, Cpu, User, AlertCircle, Bookmark, Trash2, Clock, Library, RotateCcw } from 'lucide-react';
 
 export default function App() {
   // --- 状态管理 ---
@@ -42,7 +42,7 @@ export default function App() {
     localStorage.setItem('omni_saved_stories', JSON.stringify(savedStories));
   }, [savedStories]);
 
-  // 当游戏状态或聊天记录更新时，如果处于游玩状态，自动更新当前存档
+  // 当游戏状态或聊天记录更新时，自动更新当前存档
   useEffect(() => {
     if (gameState === 'playing' && currentStoryId && chatHistory.length > 0) {
       setSavedStories(prev => prev.map(story => 
@@ -104,14 +104,14 @@ export default function App() {
     }
   };
 
-  // 新建游戏 (创建新存档)
+  // 新建游戏
   const handleStartNewGame = async () => {
     if (!worldSetting.trim()) return;
     
     const newId = Date.now().toString();
     setCurrentStoryId(newId);
     setChatHistory([]);
-    setActiveTab('setup'); // 切换回设定面板展示配置
+    setActiveTab('setup');
     
     const initialPrompt = "游戏开始。请根据世界观设定，描绘玩家当前的处境，并给出第一个互动抉择。";
     const responseText = await generateStory(initialPrompt, []);
@@ -119,7 +119,6 @@ export default function App() {
     const initialHistory = [{ type: 'system', content: responseText }];
     setChatHistory(initialHistory);
 
-    // 添加到书架
     const newStory = {
       id: newId,
       title: `${genre} - ${new Date().toLocaleDateString()}`,
@@ -138,12 +137,12 @@ export default function App() {
     setChatHistory(story.history);
     setCurrentStoryId(story.id);
     setGameState('playing');
-    setActiveTab('setup'); // 读取后切回主配置面板
+    setActiveTab('setup');
   };
 
   // 删除存档
   const handleDeleteStory = (e, id) => {
-    e.stopPropagation(); // 阻止触发读取事件
+    e.stopPropagation();
     if (window.confirm('确定要删除这条故事记录吗？无法恢复。')) {
       setSavedStories(prev => prev.filter(s => s.id !== id));
       if (currentStoryId === id) {
@@ -154,7 +153,7 @@ export default function App() {
     }
   };
 
-  // 终止当前模拟
+  // 终止模拟
   const handleStopSimulation = () => {
     setGameState('setup');
     setChatHistory([]);
@@ -181,7 +180,19 @@ export default function App() {
     }
   };
 
-  // 格式化时间戳
+  // 🌟 新增：时间回溯（节点回滚）功能
+  const handleRollback = (index) => {
+    if (gameState === 'loading') return;
+    // 如果已经是最后一条消息，不用回滚
+    if (index === chatHistory.length - 1) return; 
+
+    if (window.confirm('时光倒流：确定要回溯到这个节点吗？这将会抹除该节点之后的所有对话剧情！')) {
+      // 截取到当前节点（包含当前节点）的历史记录
+      const newHistory = chatHistory.slice(0, index + 1);
+      setChatHistory(newHistory);
+    }
+  };
+
   const formatTime = (ts) => {
     const d = new Date(ts);
     return `${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
@@ -193,7 +204,6 @@ export default function App() {
       {/* --- 左侧边栏 --- */}
       <div className="w-80 bg-slate-900 border-r border-slate-800 flex flex-col shadow-2xl z-10 shrink-0">
         
-        {/* Header */}
         <div className="p-6 border-b border-slate-800 flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
             <Cpu className="text-white" size={20} />
@@ -204,7 +214,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="flex border-b border-slate-800">
           <button 
             onClick={() => setActiveTab('setup')}
@@ -221,14 +230,10 @@ export default function App() {
           </button>
         </div>
 
-        {/* 面板内容 */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           
-          {/* 设定面板 */}
           {activeTab === 'setup' && (
             <div className="p-6 space-y-6">
-              
-              {/* API 配置区域 */}
               <div className="space-y-3">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">连接配置</label>
                 <input 
@@ -254,10 +259,8 @@ export default function App() {
                 />
               </div>
 
-              {/* 世界观配置区域 */}
               <div className="space-y-4 pt-4 border-t border-slate-800">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">世界生成器</label>
-                
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 text-sm text-slate-400"><BookOpen size={14} /> 剧本类型</label>
                   <input 
@@ -268,7 +271,6 @@ export default function App() {
                     className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 disabled:opacity-50 transition-all"
                   />
                 </div>
-
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 text-sm text-slate-400"><Bookmark size={14} /> 初始设定</label>
                   <textarea 
@@ -281,7 +283,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 操作按钮 */}
               <div className="pt-4 border-t border-slate-800">
                 {gameState === 'setup' ? (
                   <button 
@@ -299,17 +300,9 @@ export default function App() {
                   </button>
                 )}
               </div>
-
-              {!apiKey && (
-                <div className="p-3 bg-amber-900/20 border border-amber-900/50 rounded-md flex gap-3 text-amber-500/90 text-xs">
-                  <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                  <p>无 API Key，将运行本地演示。申请 Token 后填入上方可解锁完整推演。</p>
-                </div>
-              )}
             </div>
           )}
 
-          {/* 书架面板 */}
           {activeTab === 'library' && (
             <div className="p-4 space-y-3">
               {savedStories.length === 0 ? (
@@ -344,7 +337,6 @@ export default function App() {
               )}
             </div>
           )}
-
         </div>
       </div>
 
@@ -359,10 +351,9 @@ export default function App() {
           </div>
         ) : (
           <>
-            {/* 对话列表区 */}
             <div className="flex-1 overflow-y-auto p-8 space-y-8 z-10 scroll-smooth custom-scrollbar">
               {chatHistory.map((msg, index) => (
-                <div key={index} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-4 duration-500`}>
+                <div key={index} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-4 duration-500 group relative`}>
                   
                   {msg.type === 'system' && (
                     <div className="w-8 h-8 rounded-full bg-cyan-950 border border-cyan-800 flex items-center justify-center mr-4 shrink-0 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
@@ -370,7 +361,7 @@ export default function App() {
                     </div>
                   )}
 
-                  <div className={`max-w-[75%] rounded-2xl px-6 py-4 leading-relaxed tracking-wide ${
+                  <div className={`max-w-[75%] rounded-2xl px-6 py-4 leading-relaxed tracking-wide relative ${
                     msg.type === 'user' 
                       ? 'bg-blue-600/20 border border-blue-500/30 text-blue-100 rounded-tr-sm shadow-lg shadow-blue-900/20' 
                       : 'bg-slate-800/50 border border-slate-700/50 text-slate-300 rounded-tl-sm backdrop-blur-sm'
@@ -382,6 +373,19 @@ export default function App() {
                       </span>
                     ))}
                   </div>
+
+                  {/* 时光倒流按钮：仅在系统消息旁显示，且不是最后一条消息时 */}
+                  {msg.type === 'system' && index !== chatHistory.length - 1 && !gameState.includes('loading') && (
+                    <button 
+                      onClick={() => handleRollback(index)}
+                      className="ml-3 mt-1 text-slate-600 hover:text-cyan-400 opacity-0 group-hover:opacity-100 transition-all flex items-start"
+                      title="时光倒流：回到此节点重新选择"
+                    >
+                      <div className="p-2 rounded-full bg-slate-900 border border-slate-800 hover:border-cyan-500 shadow-lg">
+                        <RotateCcw size={16} />
+                      </div>
+                    </button>
+                  )}
 
                   {msg.type === 'user' && (
                     <div className="w-8 h-8 rounded-full bg-blue-950 border border-blue-800 flex items-center justify-center ml-4 shrink-0">
@@ -406,7 +410,6 @@ export default function App() {
               <div ref={chatEndRef} />
             </div>
 
-            {/* 输入区 */}
             <div className="p-6 bg-slate-900/80 backdrop-blur-md border-t border-slate-800/50 z-10">
               <div className="max-w-4xl mx-auto relative group">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
@@ -435,7 +438,6 @@ export default function App() {
         )}
       </div>
 
-      {/* 滚动条样式 */}
       <style dangerouslySetInnerHTML={{__html: `
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
